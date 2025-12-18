@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Terraria V3: Stable Multiplayer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: #121212;
+            font-family: 'Press Start 2P', monospace;
+            touch-action: none; user-select: none;
+            -webkit-font-smoothing: none;
+            image-rendering: pixelated;
+        }
+
+        /* UI GLOBAL */
+        .ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
+        }
+        .pointer-events-auto { pointer-events: auto; }
+
+        /* LOBBY */
+        #lobby-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 100;
+        }
+        
+        .panel {
+            background: #222; border: 4px solid #fff; padding: 20px;
+            border-radius: 4px; color: white; width: 90%; max-width: 380px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            max-height: 90vh; overflow-y: auto;
+        }
+
+        h1 { color: #ffd700; text-shadow: 3px 3px 0 #000; font-size: 24px; margin-bottom: 20px; text-align: center; line-height: 1.5; }
+        .subtitle { font-size: 10px; color: #aaa; text-align: center; margin-top: -15px; margin-bottom: 20px; }
+        
+        .control-group { margin-bottom: 15px; }
+        label { display: block; font-size: 10px; color: #aaa; margin-bottom: 5px; }
+        
+        input[type="text"] {
+            width: 100%; padding: 12px; background: #333; border: 2px solid #555;
+            color: white; font-family: inherit; font-size: 12px; box-sizing: border-box;
+            text-transform: uppercase;
+        }
+
+        .row { display: flex; gap: 10px; justify-content: space-between; margin-bottom: 10px; }
+        .col { flex: 1; display: flex; flex-direction: column; align-items: center; }
+        
+        input[type="color"] {
+            -webkit-appearance: none; border: none; width: 40px; height: 40px;
+            cursor: pointer; background: none; padding: 0; border-radius: 50%; overflow: hidden;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 2px solid #fff; border-radius: 50%; }
+
+        select {
+            width: 100%; padding: 8px; background: #333; color: white;
+            border: 2px solid #555; font-family: inherit; font-size: 10px;
+        }
+
+        button.start-btn {
+            background: #4CAF50; color: white; border: none; padding: 15px;
+            width: 100%; font-family: inherit; font-size: 14px; cursor: pointer;
+            box-shadow: 0 4px 0 #2E7D32; margin-top: 10px; text-transform: uppercase;
+        }
+        button.start-btn:active { transform: translateY(4px); box-shadow: none; }
+
+        /* GAME HUD */
+        #hud { display: none; }
+        
+        #inv-bar {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 5px; padding: 5px; background: rgba(0,0,0,0.8);
+            border: 2px solid #555; border-radius: 8px;
+        }
+        
+        .slot {
+            width: 36px; height: 36px; background: rgba(255,255,255,0.05);
+            border: 2px solid #333; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 16px; position: relative; transition: all 0.1s;
+        }
+        .slot.active { border-color: #ffd700; background: rgba(255,215,0,0.2); transform: scale(1.1); z-index: 2; box-shadow: 0 0 10px rgba(255,215,0,0.5); }
+        .slot span { position: absolute; bottom: 0; right: 2px; font-size: 8px; color: white; }
+
+        #health-bar-container {
+            position: absolute; top: 10px; right: 10px; width: 100px; height: 20px;
+            background: #333; border: 2px solid #fff;
+        }
+        #health-fill { width: 100%; height: 100%; background: #f44336; transition: width 0.2s; }
+        #health-text { position: absolute; top: 2px; left:0; width:100%; text-align: center; font-size: 8px; color: white; text-shadow: 1px 1px 0 #000; }
+
+        #chat-area {
+            position: absolute; bottom: 80px; left: 20px; width: 300px;
+            pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end;
+            height: 200px; overflow: hidden;
+            mask-image: linear-gradient(to top, black 80%, transparent 100%);
+            z-index: 20;
+        }
+        .chat-msg {
+            background: rgba(0,0,0,0.6); color: white; padding: 4px 8px;
+            margin-bottom: 4px; border-radius: 4px; font-size: 10px;
+            width: fit-content; max-width: 100%; text-shadow: 1px 1px 0 #000;
+        }
+        .chat-msg b { color: #ffd700; }
+
+        #chat-input-box {
+            position: absolute; bottom: 20px; left: 20px; width: 250px;
+            display: none; pointer-events: auto; z-index: 30;
+            background: rgba(0,0,0,0.8); padding: 5px; border-radius: 4px;
+        }
+        #chat-input {
+            border: 1px solid #555; background: #222; color: white; width: 100%;
+        }
+
+        /* MOBILE CONTROLS */
+        #mobile-controls { display: none; }
+        .touch-btn {
+            position: absolute; background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.3); backdrop-filter: blur(4px);
+            border-radius: 50%; pointer-events: auto; touch-action: none;
+        }
+        .touch-btn:active { background: rgba(255,255,255,0.3); transform: scale(0.95); }
+
+        #stick-base { bottom: 40px; left: 40px; width: 100px; height: 100px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); position: absolute; pointer-events: auto; }
+        #stick-knob { width: 40px; height: 40px; background: rgba(255,255,255,0.5); border-radius: 50%; position: absolute; top: 30px; left: 30px; pointer-events: none; }
+        
+        #btn-jump { bottom: 60px; right: 40px; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; background: rgba(76, 175, 80, 0.3); }
+        #btn-action { bottom: 60px; right: 130px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: white; background: rgba(244, 67, 54, 0.3); }
+        #btn-chat-mob { top: 10px; left: 10px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+        /* LOADING */
+        #loading-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%; background: #111;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; color: white; z-index: 200; display: none;
+        }
+        .loader { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid #ffd700; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+    <div class="loader"></div>
+    <div id="loading-text">BLINDANDO CONEXÃO...</div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby-screen">
+    <div class="panel">
+        <h1>TERRARIA<br>ULTIMATE V3</h1>
+        <div class="subtitle">Stable Multiplayer</div>
+        
+        <div class="control-group">
+            <label>NICKNAME</label>
+            <input type="text" id="p-nick" value="HERO" maxlength="12">
+        </div>
+
+        <div class="row">
+            <div class="col"><label>PELE</label><input type="color" id="c-skin" value="#ffdbac"></div>
+            <div class="col"><label>OLHOS</label><input type="color" id="c-eye" value="#000000"></div>
+            <div class="col"><label>CABELO</label><input type="color" id="c-hair" value="#5d4037"></div>
+        </div>
+        <div class="row">
+            <div class="col"><label>CAMISA</label><input type="color" id="c-shirt" value="#e53935"></div>
+            <div class="col"><label>CALÇA</label><input type="color" id="c-pants" value="#1e88e5"></div>
+            <div class="col"><label>SAPATO</label><input type="color" id="c-shoes" value="#444444"></div>
+        </div>
+
+        <div class="control-group">
+            <label>ESTILO DE CABELO</label>
+            <select id="s-hair-style">
+                <option value="0">Careca</option>
+                <option value="1" selected>Curto</option>
+                <option value="2">Longo</option>
+                <option value="3">Punk</option>
+                <option value="4">Afro</option>
+            </select>
+        </div>
+
+        <button class="start-btn" onclick="initGame()">JOGAR</button>
+    </div>
+</div>
+
+<!-- GAME CANVAS -->
+<canvas id="gameCanvas"></canvas>
+
+<!-- HUD -->
+<div id="hud" class="ui-layer">
+    <div id="health-bar-container">
+        <div id="health-fill"></div>
+        <div id="health-text">100/100</div>
+    </div>
+
+    <div id="inv-bar" class="pointer-events-auto">
+        <!-- JS fills this -->
+    </div>
+
+    <div id="chat-area"></div>
+    
+    <div id="chat-input-box">
+        <input type="text" id="chat-input" placeholder="Enter para enviar..." autocomplete="off">
+    </div>
+
+    <div id="mobile-controls">
+        <div id="stick-base">
+            <div id="stick-knob"></div>
+        </div>
+        <div id="btn-jump" class="touch-btn">PULAR</div>
+        <div id="btn-action" class="touch-btn" onclick="forceAttack()">⚔️</div>
+        <div id="btn-chat-mob" class="touch-btn" onclick="toggleChat()">💬</div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, query, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    /* --- CONFIGURAÇÃO --- */
+    const firebaseConfig = {
+      apiKey: "AIzaSyChPRJcA-qNZBVM6ooEcjUbB79XRW1XNAM",
+      authDomain: "onyxchat-8ad6f.firebaseapp.com",
+      projectId: "onyxchat-8ad6f",
+      storageBucket: "onyxchat-8ad6f.firebasestorage.app",
+      messagingSenderId: "896434555696",
+      appId: "1:896434555696:web:dcc626cc34eef3a0d816f5",
+      measurementId: "G-GR1SJMYQZ2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    // Alterado ID para garantir DB limpo
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'terra-v3-stable';
+
+    const WORLD_SEED = 12345; 
+
+    /* --- ENGINE CORE --- */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+    
+    const TILE = 32;
+    const WORLD_W = 200;
+    const WORLD_H = 100;
+    const CHUNK_SIZE = 16;
+    
+    // Assets & IDs
+    const BLOCK_DEFS = {
+        0: { name: 'Air', solid: false },
+        1: { name: 'Dirt', solid: true, color: '#5D4037' },
+        2: { name: 'Grass', solid: true, color: '#388E3C', top: '#4CAF50' },
+        3: { name: 'Stone', solid: true, color: '#757575' },
+        4: { name: 'Wood', solid: true, color: '#6D4C41' },
+        5: { name: 'Leaves', solid: true, color: '#2E7D32' },
+        6: { name: 'Bedrock', solid: true, color: '#212121' },
+        7: { name: 'Bricks', solid: true, color: '#8D6E63' },
+        8: { name: 'Iron', solid: true, color: '#A1887F' }, 
+        9: { name: 'Gold', solid: true, color: '#FFD54F' }, 
+        10:{ name: 'Coal', solid: true, color: '#212121' }, 
+    };
+
+    const ITEMS = {
+        0: { type: 'tool', name: 'Pickaxe', icon: '⛏️', damage: 2 },
+        100: { type: 'weapon', name: 'Sword', icon: '⚔️', damage: 5, color: '#ddd' },
+    };
+
+    let textures = {}; 
+    let world = []; 
+    let particles = [];
+    let enemies = [];
+    
+    // Players
+    let me = {
+        id: null, x: 0, y: 0, vx: 0, vy: 0, w: 20, h: 38,
+        grounded: false, facing: 1, anim: 0, armAngle: 0,
+        inv: 0, 
+        hp: 100, maxHp: 100, dead: false,
+        nick: 'Player',
+        style: { skin:'#ffdbac', eye:'#000', hair:'#5d4037', shirt:'#e53935', pants:'#1e88e5', shoes:'#444', hStyle:1 },
+        chat: { msg: '', timer: 0 },
+        lastAttack: 0
+    };
+    let others = {};
+    let isChatting = false; // Flag crucial para não mover enquanto digita
+
+    // Camera
+    let cam = { x: 0, y: 0 };
+    
+    // Inputs
+    let keys = {};
+    let mouse = { x:0, y:0, down:false, wx:0, wy:0 };
+    let joy = { active: false, dx: 0, dy: 0, bx:0, by:0 };
+
+    /* --- RANDOM --- */
+    function mulberry32(a) {
+        return function() {
+          var t = a += 0x6D2B79F5;
+          t = Math.imul(t ^ t >>> 15, t | 1);
+          t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+          return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+    }
+    const rng = mulberry32(WORLD_SEED);
+
+    /* --- GERAÇÃO --- */
+    function genTexture(id) {
+        const c = document.createElement('canvas'); c.width=TILE; c.height=TILE;
+        const x = c.getContext('2d');
+        const def = BLOCK_DEFS[id];
+        x.fillStyle = def.color; x.fillRect(0,0,TILE,TILE);
+        if(id===1) { x.fillStyle='rgba(0,0,0,0.1)'; for(let i=0;i<6;i++) x.fillRect(Math.random()*28, Math.random()*28, 4,4); } 
+        else if(id===2) { x.fillStyle = '#5D4037'; x.fillRect(0,0,32,32); x.fillStyle = def.top; x.fillRect(0,0,32,10); x.fillStyle = '#388E3C'; for(let i=0;i<5;i++) x.fillRect(i*6 + Math.random()*4, 10, 2, Math.random()*6); } 
+        else if(id===3) { x.fillStyle='rgba(255,255,255,0.1)'; x.beginPath(); x.moveTo(0,0); x.lineTo(15,15); x.stroke(); x.fillRect(10, 20, 5, 5); } 
+        else if(id===8) { x.fillStyle = '#D7CCC8'; x.fillRect(8,8,6,6); x.fillRect(20,15,8,8); } 
+        else if(id===9) { x.fillStyle = '#FFF176'; x.fillRect(5,20,6,6); x.fillRect(22,5,6,6); } 
+        else if(id===10) { x.fillStyle = '#000'; x.fillRect(10,10,8,8); x.fillRect(5,22,5,5); }
+        return c;
+    }
+
+    function initGameData() {
+        for(let k in BLOCK_DEFS) if(k>0) textures[k] = genTexture(parseInt(k));
+
+        const bar = document.getElementById('inv-bar');
+        bar.innerHTML = '';
+        const items = [0, 100, 1, 2, 3, 4, 7]; 
+        items.forEach(id => {
+            let el = document.createElement('div');
+            el.className = 'slot pointer-events-auto';
+            if(ITEMS[id]) el.innerHTML = ITEMS[id].icon; 
+            else {
+                let img = genTexture(id); img.style.width='20px'; img.style.height='20px'; el.appendChild(img);
+            }
+            if(id === me.inv) el.classList.add('active');
+            el.onclick = (e) => {
+                e.stopPropagation();
+                me.inv = id;
+                document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
+                el.classList.add('active');
+            };
+            bar.appendChild(el);
+        });
+        generateWorld();
+    }
+
+    function generateWorld() {
+        document.getElementById('loading-overlay').style.display = 'flex';
+        setTimeout(() => {
+            for(let y=0; y<WORLD_H; y++) {
+                world[y] = new Uint8Array(WORLD_W);
+                for(let x=0; x<WORLD_W; x++) {
+                    let h1 = Math.sin(x * 0.05) * 6;
+                    let h2 = Math.sin(x * 0.15) * 3;
+                    let surface = 25 + Math.floor(h1 + h2);
+                    let caveVal = (Math.sin(x*0.1) + Math.cos(y*0.1)) * 0.5 + rng();
+
+                    if(y >= WORLD_H-2) world[y][x] = 6; 
+                    else if(y > surface) {
+                        if(y > surface + 8 && caveVal > 1.2) world[y][x] = 0;
+                        else {
+                            if(y < surface + 4) world[y][x] = 1; 
+                            else world[y][x] = 3; 
+                            if(world[y][x] === 3) {
+                                let oreRng = rng();
+                                if(oreRng > 0.96) world[y][x] = 9; 
+                                else if(oreRng > 0.93) world[y][x] = 8; 
+                                else if(oreRng > 0.90) world[y][x] = 10; 
+                            }
+                        }
+                    } else if(y === surface) world[y][x] = 2; 
+                }
+            }
+            for(let i=0; i<10; i++) spawnEnemy(Math.floor(rng()*WORLD_W)*TILE, 0);
+            
+            let spawnX = 50, spawnY = 0;
+            for(let y=0; y<WORLD_H; y++) {
+                if(BLOCK_DEFS[world[y][spawnX]].solid) { spawnY = (y-3) * TILE; break; }
+            }
+            me.x = spawnX * TILE; me.y = spawnY;
+            
+            document.getElementById('loading-overlay').style.display = 'none';
+            loop(); 
+        }, 100);
+    }
+
+    function spawnEnemy(x, y) {
+        let ty = 10; let tx = Math.floor(x/TILE);
+        for(let py=0; py<WORLD_H; py++) {
+             if(world[py] && world[py][tx] && BLOCK_DEFS[world[py][tx]].solid) { ty = (py-1)*TILE; break; }
+        }
+        enemies.push({
+            id: 'slime_' + Math.random().toString(36).substr(2,9),
+            type: 'slime', x: x, y: ty, w: 28, h: 20, vx: 0, vy: 0, hp: 20, color: '#76FF03', timer: 0
+        });
+    }
+
+    /* --- GAME LOOP --- */
+    function update() {
+        if(!me.id) return;
+        
+        // INPUT LOCK SE CHAT ABERTO
+        if(isChatting) {
+            me.vx *= 0.8;
+            me.vy += 0.6;
+            checkCol(me, false);
+            return;
+        }
+
+        if(me.dead) {
+            me.invTimer = (me.invTimer || 0) + 1;
+            if(me.invTimer > 100) { me.dead = false; me.hp = 100; me.y = 10 * TILE; me.vy = 0; updateHealth(); }
+            return;
+        }
+
+        let dir = 0;
+        if(keys['KeyA'] || keys['ArrowLeft']) dir = -1;
+        if(keys['KeyD'] || keys['ArrowRight']) dir = 1;
+        if(joy.active) dir = joy.dx / 40;
+
+        me.vx += dir * 0.8; me.vx *= 0.8; 
+        me.vy += 0.6; if(me.vy > 15) me.vy = 15;
+
+        if(me.grounded && (keys['Space'] || keys['ArrowUp'] || keys['btnjump'])) {
+            me.vy = -11; me.grounded = false; spawnParticles(me.x+me.w/2, me.y+me.h, '#fff', 3);
+        }
+
+        me.x += me.vx; checkCol(me, true);
+        me.y += me.vy; me.grounded = false; checkCol(me, false);
+
+        if(me.x < 0) me.x = 0; if(me.x > WORLD_W*TILE - me.w) me.x = WORLD_W*TILE - me.w;
+        if(me.y > WORLD_H*TILE) damagePlayer(100); 
+
+        if(Math.abs(me.vx) > 0.1) { me.facing = Math.sign(me.vx); me.anim += 0.2; } else me.anim = 0;
+
+        let cx = me.x + me.w/2 - cam.x;
+        let cy = me.y + me.h/3 - cam.y;
+        let mx = mouse.x, my = mouse.y;
+        
+        if(joy.active && !mouse.down) me.armAngle = me.facing === 1 ? 0 : Math.PI;
+        else me.armAngle = Math.atan2(my - cy, mx - cx);
+
+        if(mouse.down) handleInteraction();
+
+        updateEnemies();
+
+        let targetX = me.x + me.w/2 - canvas.width/2;
+        let targetY = me.y + me.h/2 - canvas.height/2;
+        cam.x += (targetX - cam.x) * 0.1; cam.y += (targetY - cam.y) * 0.1;
+        cam.x = Math.max(0, Math.min(cam.x, WORLD_W*TILE - canvas.width));
+        cam.y = Math.max(0, Math.min(cam.y, WORLD_H*TILE - canvas.height));
+        cam.rx = Math.floor(cam.x); cam.ry = Math.floor(cam.y);
+
+        for(let i=particles.length-1; i>=0; i--) {
+            let p = particles[i]; p.x += p.vx; p.y += p.vy; p.life--; p.vy += 0.2;
+            if(p.life <= 0) particles.splice(i, 1);
+        }
+        
+        if(me.chat.timer > 0) me.chat.timer--;
+        if(me.invul > 0) me.invul--;
+    }
+
+    function updateEnemies() {
+        enemies.forEach(e => {
+            e.vy += 0.5;
+            if(e.grounded && Math.random() < 0.02) { e.vy = -8; e.vx = (Math.random() - 0.5) * 6; }
+            e.vx *= 0.9;
+            e.x += e.vx; checkCol(e, true); e.y += e.vy; e.grounded = false; checkCol(e, false);
+
+            if(!me.dead && rectIntersect(me, e) && me.invul <= 0) {
+                damagePlayer(15); me.vx = Math.sign(me.x - e.x) * 10; me.vy = -5;
+            }
+        });
+        enemies = enemies.filter(e => e.hp > 0);
+        if(enemies.length < 5 && Math.random() < 0.01) spawnEnemy(Math.random()*WORLD_W*TILE, 0);
+    }
+
+    function checkCol(ent, isX) {
+        let minX = Math.floor(ent.x/TILE), maxX = Math.floor((ent.x+ent.w-0.1)/TILE);
+        let minY = Math.floor(ent.y/TILE), maxY = Math.floor((ent.y+ent.h-0.1)/TILE);
+        
+        for(let y=minY; y<=maxY; y++) {
+            for(let x=minX; x<=maxX; x++) {
+                if(y<0||y>=WORLD_H||x<0||x>=WORLD_W) continue;
+                if(BLOCK_DEFS[world[y][x]].solid) {
+                    if(isX) {
+                        if(ent.vx > 0) ent.x = x*TILE - ent.w; else ent.x = (x+1)*TILE;
+                        ent.vx = 0;
+                    } else {
+                        if(ent.vy > 0) { ent.y = y*TILE - ent.h; ent.grounded = true; }
+                        else ent.y = (y+1)*TILE;
+                        ent.vy = 0;
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    function rectIntersect(r1, r2) {
+        return !(r2.x > r1.x + r1.w || r2.x + r2.w < r1.x || r2.y > r1.y + r1.h || r2.y + r2.h < r1.y);
+    }
+
+    function damagePlayer(amount) {
+        me.hp -= amount; me.invul = 30; spawnParticles(me.x, me.y, '#f00', 10); updateHealth();
+        if(me.hp <= 0) { me.dead = true; me.hp = 0; spawnParticles(me.x, me.y, '#f00', 30); }
+    }
+    
+    function updateHealth() {
+        const pct = (me.hp / me.maxHp) * 100;
+        document.getElementById('health-fill').style.width = pct + '%';
+        document.getElementById('health-text').innerText = Math.ceil(me.hp) + '/' + me.maxHp;
+    }
+
+    function handleInteraction() {
+        if(me.dead || isChatting) return;
+        
+        let wx = mouse.x + cam.x; let wy = mouse.y + cam.y;
+        
+        if(me.inv === 100) { 
+            if(Date.now() - me.lastAttack < 300) return;
+            me.lastAttack = Date.now();
+            me.swinging = true; setTimeout(()=>me.swinging=false, 200);
+
+            let hx = me.x + me.w/2 + Math.cos(me.armAngle)*40;
+            let hy = me.y + me.h/2 + Math.sin(me.armAngle)*40;
+            
+            enemies.forEach(e => {
+                let dist = Math.hypot((e.x+e.w/2)-hx, (e.y+e.h/2)-hy);
+                if(dist < 40) {
+                    e.hp -= 10; e.vx = Math.cos(me.armAngle) * 8; e.vy = -4; spawnParticles(e.x, e.y, '#76FF03', 5);
+                }
+            });
+            return;
+        }
+
+        let tx = Math.floor(wx/TILE); let ty = Math.floor(wy/TILE);
+        if(tx<0||tx>=WORLD_W||ty<0||ty>=WORLD_H) return;
+        
+        let dist = Math.hypot((me.x+me.w/2)-wx, (me.y+me.h/2)-wy);
+        if(dist > 150) return; 
+
+        let tile = world[ty][tx];
+        
+        if(me.inv === 0) { 
+            if(tile !== 0 && tile !== 6) { changeBlock(tx, ty, 0); spawnParticles(wx, wy, BLOCK_DEFS[tile].color, 4); }
+        } else if(me.inv !== 100) { 
+            let px = me.x, py = me.y, pw = me.w, ph = me.h;
+            if(wx > px && wx < px+pw && wy > py && wy < py+ph) return;
+            if(tile === 0 || !BLOCK_DEFS[tile].solid) { changeBlock(tx, ty, me.inv); }
+        }
+    }
+
+    window.forceAttack = () => {
+        me.inv = 100; mouse.down = true; handleInteraction(); setTimeout(()=>mouse.down=false, 100);
+    }
+
+    function spawnParticles(x, y, color, count) {
+        for(let i=0; i<count; i++) {
+            particles.push({
+                x: x, y: y, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, life: 15 + Math.random()*15, color: color
+            });
+        }
+    }
+
+    /* --- RENDER --- */
+    function draw() {
+        let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, '#87CEEB'); grad.addColorStop(1, '#B2EBF2');
+        ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+        let sx = Math.max(0, Math.floor(cam.rx/TILE));
+        let ex = Math.min(WORLD_W, sx + Math.ceil(canvas.width/TILE) + 1);
+        let sy = Math.max(0, Math.floor(cam.ry/TILE));
+        let ey = Math.min(WORLD_H, sy + Math.ceil(canvas.height/TILE) + 1);
+
+        for(let y=sy; y<ey; y++) {
+            for(let x=sx; x<ex; x++) {
+                let id = world[y][x];
+                if(id !== 0) {
+                    let px = (x*TILE) - cam.rx; let py = (y*TILE) - cam.ry;
+                    if(textures[id]) ctx.drawImage(textures[id], px, py);
+                    else { ctx.fillStyle = '#f0f'; ctx.fillRect(px,py,TILE,TILE); }
+                }
+            }
+        }
+
+        enemies.forEach(e => {
+            let cx = Math.floor(e.x - cam.rx); let cy = Math.floor(e.y - cam.ry);
+            ctx.fillStyle = e.color;
+            let h = e.h; if(Math.abs(e.vy) < 0.5 && e.grounded) h = e.h - 4; 
+            ctx.fillRect(cx, cy + (e.h-h), e.w, h);
+            ctx.fillStyle = '#fff'; ctx.fillRect(cx+5, cy+5+(e.h-h), 6, 6); ctx.fillRect(cx+18, cy+5+(e.h-h), 6, 6);
+            ctx.fillStyle = '#000'; ctx.fillRect(cx+7, cy+7+(e.h-h), 2, 2); ctx.fillRect(cx+20, cy+7+(e.h-h), 2, 2);
+            ctx.fillStyle='red'; ctx.fillRect(cx, cy-8, 28, 4); ctx.fillStyle='#0f0'; ctx.fillRect(cx, cy-8, 28*(e.hp/20), 4);
+        });
+
+        particles.forEach(p => {
+            ctx.fillStyle = p.color; ctx.fillRect(Math.floor(p.x - cam.rx), Math.floor(p.y - cam.ry), 4, 4);
+        });
+
+        for(let id in others) drawChar(others[id]);
+        if(me.id && !me.dead) drawChar(me);
+        
+        let cx = Math.floor((mouse.x+cam.rx)/TILE)*TILE - cam.rx;
+        let cy = Math.floor((mouse.y+cam.ry)/TILE)*TILE - cam.ry;
+        ctx.strokeStyle = 'white'; ctx.lineWidth=2; ctx.strokeRect(cx, cy, TILE, TILE);
+        
+        if(me.dead) {
+            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = '#f00'; ctx.font = '30px "Press Start 2P"'; ctx.textAlign = 'center';
+            ctx.fillText("VOCÊ MORREU", canvas.width/2, canvas.height/2);
+            ctx.fillStyle = '#fff'; ctx.font = '12px "Press Start 2P"';
+            ctx.fillText("Respawnando...", canvas.width/2, canvas.height/2 + 40);
+        }
+    }
+
+    function drawChar(p) {
+        if(p.invul && Math.floor(Date.now()/50)%2===0) return; 
+
+        let cx = Math.floor(p.x - cam.rx + p.w/2);
+        let cy = Math.floor(p.y - cam.ry + p.h/2);
+        
+        ctx.save(); ctx.translate(cx, cy); if(p.facing === -1) ctx.scale(-1, 1);
+        let walk = Math.sin(p.anim)*6;
+        
+        ctx.fillStyle = p.style.pants; ctx.fillRect(-6+walk, 8, 6, 12); ctx.fillStyle = p.style.shoes; ctx.fillRect(-6+walk, 18, 6, 2); 
+        ctx.fillStyle = p.style.shirt; ctx.fillRect(-8, -8, 16, 20);
+        ctx.fillStyle = p.style.pants; ctx.fillRect(-6-walk, 8, 6, 12); ctx.fillStyle = p.style.shoes; ctx.fillRect(-6-walk, 18, 6, 2);
+        ctx.fillStyle = p.style.skin; ctx.fillRect(-8, -20, 16, 14);
+        ctx.fillStyle = p.style.eye; ctx.fillRect(2, -18, 2, 4); if(p.facing===1) { ctx.fillRect(6, -18, 2, 4); } 
+        
+        ctx.fillStyle = p.style.hair;
+        let hs = parseInt(p.style.hStyle);
+        if(hs === 1) ctx.fillRect(-9, -22, 18, 6);
+        else if(hs === 2) { ctx.fillRect(-9, -22, 18, 6); ctx.fillRect(-9, -16, 4, 12); }
+        else if(hs === 3) ctx.fillRect(-2, -26, 4, 8);
+        else if(hs === 4) ctx.fillRect(-10, -24, 20, 10);
+
+        ctx.save(); ctx.translate(0, -4); 
+        let ang = (p === me) ? me.armAngle : p.armAngle;
+        if(p.facing === -1) ang = Math.PI - ang;
+        if(p.swinging) ang += (p.facing) * 1.5;
+
+        ctx.rotate(ang);
+        ctx.fillStyle = p.style.skin; ctx.fillRect(0, -3, 14, 6); 
+        
+        if(p.inv === 0) { 
+             ctx.translate(14, 0); ctx.rotate(-Math.PI/4);
+             ctx.fillStyle = '#6D4C41'; ctx.fillRect(0, -2, 10, 4); ctx.fillStyle = '#AAA'; ctx.fillRect(6, -6, 4, 12);
+        } else if(p.inv === 100) { 
+             ctx.translate(14, 0); ctx.rotate(-Math.PI/4);
+             ctx.fillStyle = '#6D4C41'; ctx.fillRect(0, -2, 8, 4); ctx.fillStyle = '#DDD'; ctx.fillRect(8, -2, 20, 4); ctx.fillStyle = '#DDD'; ctx.fillRect(8, -5, 4, 10); 
+        } else { 
+            if(textures[p.inv]) ctx.drawImage(textures[p.inv], 12, -6, 12, 12);
+        }
+        ctx.restore(); ctx.restore(); 
+
+        ctx.fillStyle = '#FFF'; ctx.font = '8px "Press Start 2P"'; ctx.textAlign = 'center'; ctx.fillText(p.nick, cx, cy - 35);
+        if(p.chat.timer > 0) {
+            ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(cx-40, cy-60, 80, 20); ctx.fillStyle = '#fff'; ctx.fillText(p.chat.msg.substring(0,12), cx, cy-48);
+        }
+    }
+
+    /* --- FIREBASE ROBUSTO --- */
+    
+    async function changeBlock(x, y, t) {
+        world[y][x] = t; 
+        try {
+            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'world_v3', `${x}_${y}`);
+            await setDoc(ref, { x, y, t, ts: serverTimestamp() });
+        } catch(e) { console.warn("Block sync fail:", e); }
+    }
+
+    let lastSentData = "";
+    
+    // SAFE NET LOOP
+    async function netLoop() {
+        if(!me.id || !auth.currentUser) return;
+        
+        try {
+            // Validar dados antes de enviar
+            if(isNaN(me.x) || isNaN(me.y)) return;
+
+            const data = {
+                x: Math.round(me.x), y: Math.round(me.y), 
+                vx: parseFloat(me.vx.toFixed(2)),
+                f: me.facing, aa: parseFloat(me.armAngle.toFixed(2)),
+                inv: me.inv, 
+                nick: me.nick || 'Player', 
+                style: me.style,
+                sw: me.swinging || false,
+                chat: { m: (me.chat.msg || '').substring(0,20), t: me.chat.timer }, // Truncate chat
+                ts: serverTimestamp()
+            };
+
+            const strData = JSON.stringify({ ...data, ts:0 });
+            if(strData === lastSentData) return;
+            lastSentData = strData;
+
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players_v3', me.id), data);
+        } catch(e) {
+            // Ignorar erros de rede momentâneos
+        }
+    }
+
+    function setupNet() {
+        try {
+            const qPlayers = query(collection(db, 'artifacts', appId, 'public', 'data', 'players_v3'));
+            onSnapshot(qPlayers, { includeMetadataChanges: false }, snap => {
+                snap.docChanges().forEach(c => {
+                    if(c.doc.id === me.id) return;
+                    if(c.type === 'removed') { delete others[c.doc.id]; return; }
+                    
+                    const d = c.doc.data();
+                    // Validation Defense
+                    if(!d || d.x === undefined || d.y === undefined) return;
+
+                    if(!others[c.doc.id]) others[c.doc.id] = { w:20, h:38, anim:0, chat:{msg:'', timer:0}, style:{}, x:d.x, y:d.y };
+                    let p = others[c.doc.id];
+                    
+                    p.tx = d.x; p.ty = d.y; 
+                    p.vx = d.vx; p.facing = d.f; p.armAngle = d.aa;
+                    p.inv = d.inv; p.nick = d.nick; p.style = d.style;
+                    p.swinging = d.sw;
+                    p.chat.msg = d.chat.m; p.chat.timer = d.chat.t;
+                });
+            }, err => console.log("Player Sync Err (Ignored)"));
+
+            const qWorld = query(collection(db, 'artifacts', appId, 'public', 'data', 'world_v3'));
+            onSnapshot(qWorld, snap => {
+                snap.docChanges().forEach(c => {
+                    const d = c.doc.data();
+                    if(d && d.x >= 0 && d.x < WORLD_W && d.y >=0 && d.y < WORLD_H) {
+                        if(world[d.y][d.x] !== d.t) {
+                            world[d.y][d.x] = d.t;
+                            spawnParticles(d.x*TILE + TILE/2, d.y*TILE + TILE/2, '#fff', 3);
+                        }
+                    }
+                });
+            }, err => console.log("World Sync Err (Ignored)"));
+        } catch(e) { console.error("Setup Net Fail:", e); }
+    }
+
+    function updateRemotePlayers() {
+        for(let id in others) {
+            let p = others[id];
+            if(p.tx !== undefined && !isNaN(p.tx) && !isNaN(p.ty)) {
+                p.x += (p.tx - p.x) * 0.2;
+                p.y += (p.ty - p.y) * 0.2;
+            }
+            if(p.vx && Math.abs(p.vx)>0.1) p.anim+=0.2; else p.anim=0;
+        }
+    }
+
+    /* --- SETUP --- */
+    window.initGame = async () => {
+        me.nick = document.getElementById('p-nick').value || "Player";
+        me.style.skin = document.getElementById('c-skin').value;
+        me.style.eye = document.getElementById('c-eye').value;
+        me.style.hair = document.getElementById('c-hair').value;
+        me.style.shirt = document.getElementById('c-shirt').value;
+        me.style.pants = document.getElementById('c-pants').value;
+        me.style.shoes = document.getElementById('c-shoes').value;
+        me.style.hStyle = document.getElementById('s-hair-style').value;
+
+        document.getElementById('lobby-screen').style.display = 'none';
+        document.getElementById('hud').style.display = 'block';
+        
+        await signInAnonymously(auth);
+    };
+
+    onAuthStateChanged(auth, u => {
+        if(u) {
+            me.id = u.uid;
+            initGameData();
+            setupNet();
+            setInterval(netLoop, 200); 
+        }
+    });
+
+    // Chat Logic Safe
+    const chatInput = document.getElementById('chat-input');
+    const chatBox = document.getElementById('chat-input-box');
+
+    window.toggleChat = () => {
+        if(chatBox.style.display === 'block') {
+            // Close
+            chatBox.style.display = 'none';
+            chatInput.blur();
+            isChatting = false;
+        } else {
+            // Open
+            chatBox.style.display = 'block';
+            chatInput.focus();
+            isChatting = true;
+            // Clear keys so player doesn't keep running
+            keys = {}; 
+        }
+    };
+    
+    // Prevent Game Inputs bubbles
+    chatInput.addEventListener('keydown', (e) => {
+        e.stopPropagation(); // CRITICAL FIX
+        if(e.key === 'Enter') {
+            let txt = e.target.value;
+            if(txt.trim()) {
+                me.chat.msg = txt; me.chat.timer = 150;
+                const log = document.getElementById('chat-area');
+                const line = document.createElement('div');
+                line.className = 'chat-msg';
+                line.innerHTML = `<b>${me.nick}:</b> ${txt}`;
+                log.appendChild(line);
+                log.scrollTop = log.scrollHeight;
+            }
+            e.target.value = '';
+            toggleChat();
+        }
+    });
+
+    // Mobile Inputs
+    if('ontouchstart' in window) {
+        document.getElementById('mobile-controls').style.display = 'block';
+        const stick = document.getElementById('stick-base');
+        const knob = document.getElementById('stick-knob');
+        
+        stick.addEventListener('touchstart', e=>{ e.preventDefault(); joy.active=true; joy.bx=e.touches[0].clientX; joy.by=e.touches[0].clientY; });
+        stick.addEventListener('touchmove', e=>{
+            e.preventDefault(); if(!joy.active) return;
+            let dx = e.touches[0].clientX - joy.bx;
+            let dy = e.touches[0].clientY - joy.by;
+            let dist = Math.min(30, Math.hypot(dx,dy));
+            let ang = Math.atan2(dy,dx);
+            joy.dx = Math.cos(ang)*dist; joy.dy = Math.sin(ang)*dist;
+            knob.style.transform = `translate(${joy.dx}px, ${joy.dy}px)`;
+        });
+        const resetJoy = (e) => { e.preventDefault(); joy.active=false; joy.dx=0; joy.dy=0; knob.style.transform=''; };
+        stick.addEventListener('touchend', resetJoy);
+        
+        document.getElementById('btn-jump').addEventListener('touchstart', e=>{ e.preventDefault(); keys['btnjump']=true; });
+        document.getElementById('btn-jump').addEventListener('touchend', e=>{ e.preventDefault(); keys['btnjump']=false; });
+        
+        canvas.addEventListener('touchstart', e => { if(!isChatting){ mouse.down=true; mouse.x=e.touches[0].clientX; mouse.y=e.touches[0].clientY; } });
+        canvas.addEventListener('touchmove', e => { if(!isChatting){ mouse.x=e.touches[0].clientX; mouse.y=e.touches[0].clientY; } });
+        canvas.addEventListener('touchend', e => { mouse.down=false; });
+    }
+
+    // Global Key Listener (with Safe Guard)
+    window.addEventListener('keydown', e => { 
+        if(isChatting) return; // FIX
+        keys[e.code]=true; 
+        if(e.key==='Enter') toggleChat(); 
+    });
+    
+    window.addEventListener('keyup', e => keys[e.code]=false);
+    
+    canvas.addEventListener('mousedown', e => { if(!isChatting) mouse.down=true; });
+    canvas.addEventListener('mouseup', e => { mouse.down=false; });
+    canvas.addEventListener('mousemove', e => { mouse.x=e.clientX; mouse.y=e.clientY; });
+    
+    window.addEventListener('resize', () => { canvas.width=window.innerWidth; canvas.height=window.innerHeight; });
+    canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+
+    function loop() { 
+        update(); 
+        updateRemotePlayers();
+        draw(); 
+        requestAnimationFrame(loop); 
+    }
+
+</script>
+</body>
+</html>
+
